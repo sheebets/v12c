@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Set page config
-st.set_page_config(page_title="Betting Odds Analysis", layout="wide")
+st.set_page_config(page_title="V1-V2 Compare Dash", layout="wide")
 
-st.title("🎲 Betting Odds Analysis Dashboard")
+st.title("📊 V1-V2 Compare Dash")
 st.markdown("---")
 
 # File upload
