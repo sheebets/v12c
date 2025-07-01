@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Set page config
-st.set_page_config(page_title="V2 vs V1 View", layout="wide")
+st.set_page_config(page_title="Betting Odds Analysis", layout="wide")
 
-st.title("V2 vs V1 View")
+st.title("🎲 Betting Odds Analysis Dashboard")
 st.markdown("---")
 
 # File upload
@@ -244,6 +244,22 @@ if uploaded_file is not None:
         if selected_lines:
             filtered_df = filtered_df[filtered_df['V2_Line'].isin(selected_lines)]
     
+    # Quarter filter (from parsed timestamps)
+    if 'Quarter' in df.columns:
+        st.sidebar.subheader("Quarter")
+        available_quarters = filtered_df['Quarter'].dropna().unique()
+        # Sort quarters properly (Q0, Q1, Q2, Q3, Q4, etc.)
+        available_quarters = sorted(available_quarters, key=lambda x: (len(x), x))
+        selected_quarters = st.sidebar.multiselect(
+            "Select Quarters:",
+            options=available_quarters,
+            default=available_quarters,
+            key="quarter_filter"
+        )
+        
+        if selected_quarters:
+            filtered_df = filtered_df[filtered_df['Quarter'].isin(selected_quarters)]
+    
     # Timestamp filter
     if 'Timestamp' in df.columns:
         st.sidebar.subheader("Timestamp")
@@ -365,40 +381,60 @@ if uploaded_file is not None:
     # Home Score filter
     if 'Home Score' in df.columns:
         st.sidebar.subheader("Home Score")
-        home_scores = filtered_df['Home Score'].dropna().unique()
+        home_scores = filtered_df['Home Score'].dropna()
         if len(home_scores) > 0:
-            min_home = int(min(home_scores))
-            max_home = int(max(home_scores))
-            selected_home_range = st.sidebar.slider(
-                "Home Score Range:",
-                min_value=min_home,
-                max_value=max_home,
-                value=(min_home, max_home),
-                key="home_score_filter"
-            )
-            filtered_df = filtered_df[
-                (filtered_df['Home Score'] >= selected_home_range[0]) & 
-                (filtered_df['Home Score'] <= selected_home_range[1])
-            ]
+            # Convert to numeric and remove any non-numeric values
+            home_scores_numeric = pd.to_numeric(home_scores, errors='coerce').dropna()
+            if len(home_scores_numeric) > 0:
+                min_home = int(home_scores_numeric.min())
+                max_home = int(home_scores_numeric.max())
+                
+                # Only show slider if min != max
+                if min_home != max_home:
+                    selected_home_range = st.sidebar.slider(
+                        "Home Score Range:",
+                        min_value=min_home,
+                        max_value=max_home,
+                        value=(min_home, max_home),
+                        key="home_score_filter"
+                    )
+                    filtered_df = filtered_df[
+                        (pd.to_numeric(filtered_df['Home Score'], errors='coerce') >= selected_home_range[0]) & 
+                        (pd.to_numeric(filtered_df['Home Score'], errors='coerce') <= selected_home_range[1])
+                    ]
+                else:
+                    st.sidebar.write(f"All Home Scores: {min_home}")
+            else:
+                st.sidebar.write("No valid Home Score data")
     
     # Away Score filter
     if 'Away Score' in df.columns:
         st.sidebar.subheader("Away Score")
-        away_scores = filtered_df['Away Score'].dropna().unique()
+        away_scores = filtered_df['Away Score'].dropna()
         if len(away_scores) > 0:
-            min_away = int(min(away_scores))
-            max_away = int(max(away_scores))
-            selected_away_range = st.sidebar.slider(
-                "Away Score Range:",
-                min_value=min_away,
-                max_value=max_away,
-                value=(min_away, max_away),
-                key="away_score_filter"
-            )
-            filtered_df = filtered_df[
-                (filtered_df['Away Score'] >= selected_away_range[0]) & 
-                (filtered_df['Away Score'] <= selected_away_range[1])
-            ]
+            # Convert to numeric and remove any non-numeric values
+            away_scores_numeric = pd.to_numeric(away_scores, errors='coerce').dropna()
+            if len(away_scores_numeric) > 0:
+                min_away = int(away_scores_numeric.min())
+                max_away = int(away_scores_numeric.max())
+                
+                # Only show slider if min != max
+                if min_away != max_away:
+                    selected_away_range = st.sidebar.slider(
+                        "Away Score Range:",
+                        min_value=min_away,
+                        max_value=max_away,
+                        value=(min_away, max_away),
+                        key="away_score_filter"
+                    )
+                    filtered_df = filtered_df[
+                        (pd.to_numeric(filtered_df['Away Score'], errors='coerce') >= selected_away_range[0]) & 
+                        (pd.to_numeric(filtered_df['Away Score'], errors='coerce') <= selected_away_range[1])
+                    ]
+                else:
+                    st.sidebar.write(f"All Away Scores: {min_away}")
+            else:
+                st.sidebar.write("No valid Away Score data")
     
     # Display filtered data info
     st.sidebar.markdown("---")
