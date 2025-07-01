@@ -446,7 +446,7 @@ if uploaded_file is not None:
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.subheader("📊 Odds Difference Analysis")
+            st.subheader("📊 Odds Difference vs Time Stamp")
             
             # Create scatter plot using matplotlib
             fig, ax = plt.subplots(figsize=(14, 8))
@@ -519,7 +519,7 @@ if uploaded_file is not None:
                 st.warning("No data available with valid timestamp information for plotting.")
             
             # Trend analysis
-            st.subheader("📈 Trend Analysis")
+            st.subheader("📈 Trends View")
             
             # Create trend charts
             trend_col1, trend_col2 = st.columns(2)
