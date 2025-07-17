@@ -93,6 +93,24 @@ if uploaded_file is not None:
             
             return player_name if player_name else None, betting_line if betting_line else None
         
+        # Extract clean selection names (remove parenthesis numbers)
+        def extract_clean_selection(text):
+            if pd.isna(text) or text == 'N/A':
+                return None
+            
+            text = str(text).strip()
+            
+            # Pattern: (numbers) Name with betting line
+            # Split by closing parenthesis and take everything after
+            parts = text.split(')')
+            if len(parts) < 2:
+                return text  # Return original if no parenthesis found
+            
+            # Get everything after the parenthesis and clean it up
+            clean_name = parts[1].strip()
+            
+            return clean_name if clean_name else text
+        
         # Parse timestamp to get quarter and time
         def parse_timestamp(timestamp):
             if pd.isna(timestamp) or timestamp == 'N/A':
@@ -117,7 +135,7 @@ if uploaded_file is not None:
                     time_decimal = minutes + (seconds / 60.0)
                     
                     # Create a combined time value for plotting
-                    # Q0=0, Q1=1, Q2=2, Q3=3, Q4=4, etc.
+                    # Q0=0, Q1=15, Q2=30, Q3=45, Q4=60, etc.
                     quarter_num = 0
                     if quarter.startswith('Q') and len(quarter) > 1:
                         try:
@@ -125,8 +143,8 @@ if uploaded_file is not None:
                         except:
                             quarter_num = 0
                     
-                    # Combined time: quarter * 15 + (15 - time_decimal)
-                    # This makes time flow from 0 to 60 for a full game
+                    # Combined time: quarter_num * 15 + (15 - time_decimal)
+                    # This makes each quarter span 15 minutes
                     combined_time = quarter_num * 15 + (15 - time_decimal)
                     
                     return quarter, time_decimal, combined_time
@@ -146,11 +164,13 @@ if uploaded_file is not None:
             df[['V1_Player', 'V1_Line']] = df['V1 Selection'].apply(
                 lambda x: pd.Series(extract_player_and_line(x))
             )
+            df['V1_Clean_Selection'] = df['V1 Selection'].apply(extract_clean_selection)
         
         if 'V2 Selection' in df.columns:
             df[['V2_Player', 'V2_Line']] = df['V2 Selection'].apply(
                 lambda x: pd.Series(extract_player_and_line(x))
             )
+            df['V2_Clean_Selection'] = df['V2 Selection'].apply(extract_clean_selection)
         
         # Replace 'N/A' with actual None/NaN for filtering
         filter_columns = ['Market', 'V2 Selection', 'Timestamp', 'Down Number', 
@@ -477,7 +497,7 @@ if uploaded_file is not None:
                     if len(level_data) > 0:
                         scatter = ax.scatter(
                             level_data['Combined_Time'], 
-                            level_data['V2 Selection'],
+                            level_data['V2_Clean_Selection'],  # Use clean selection names
                             c=diff_colors[i], 
                             s=60,  # Fixed size for better visibility
                             alpha=0.7,
@@ -491,24 +511,29 @@ if uploaded_file is not None:
                     min_time = plot_data['Combined_Time'].min()
                     max_time = plot_data['Combined_Time'].max()
                     
-                    # Create quarter markers
-                    quarter_ticks = [0, 15, 30, 45, 60]  # Start of each quarter
-                    quarter_labels = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
+                    # Create quarter markers based on actual data quarters
+                    available_quarters = plot_data['Quarter'].dropna().unique()
+                    quarter_ticks = []
+                    quarter_labels = []
                     
-                    # Only show ticks that are within data range
-                    valid_ticks = []
-                    valid_labels = []
-                    for tick, label in zip(quarter_ticks, quarter_labels):
-                        if min_time <= tick <= max_time:
-                            valid_ticks.append(tick)
-                            valid_labels.append(label)
+                    # Map quarters to their time positions
+                    for quarter in sorted(available_quarters, key=lambda x: (len(x), x)):
+                        if quarter.startswith('Q') and len(quarter) > 1:
+                            try:
+                                quarter_num = int(quarter[1:])
+                                quarter_start_time = quarter_num * 15
+                                if min_time <= quarter_start_time <= max_time:
+                                    quarter_ticks.append(quarter_start_time)
+                                    quarter_labels.append(quarter)
+                            except:
+                                continue
                     
-                    if valid_ticks:
-                        ax.set_xticks(valid_ticks)
-                        ax.set_xticklabels(valid_labels)
+                    if quarter_ticks:
+                        ax.set_xticks(quarter_ticks)
+                        ax.set_xticklabels(quarter_labels)
                 
                 ax.set_xlabel('Game Time (Quarters)')
-                ax.set_ylabel('V2 Selection')
+                ax.set_ylabel('V2 Selection (Clean)')
                 ax.set_title('V2 Selection vs Game Time (Colored by V2-V1 Difference Level)')
                 ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
                 ax.grid(True, alpha=0.3)
@@ -551,20 +576,25 @@ if uploaded_file is not None:
                     linewidth=0.3
                 )
                 
-                # Add labels for V2 Selection (only show a subset to avoid overcrowding)
+                # Add labels for V2 Clean Selection (only show a subset to avoid overcrowding)
                 if len(values_plot_data) <= 50:  # Show labels only if not too many points
                     for idx, row in values_plot_data.iterrows():
-                        if pd.notna(row['V2 Selection']):
+                        if pd.notna(row['V2_Clean_Selection']):
+                            clean_label = str(row['V2_Clean_Selection'])
+                            # Truncate label if too long
+                            if len(clean_label) > 25:
+                                clean_label = clean_label[:25] + '...'
+                            
                             # Add label for V1 point
                             ax_values.annotate(
-                                str(row['V2 Selection'])[:20] + ('...' if len(str(row['V2 Selection'])) > 20 else ''),
+                                clean_label,
                                 (row['Combined_Time'], row['V1']),
                                 xytext=(5, 5), textcoords='offset points',
                                 fontsize=8, alpha=0.7, color='blue'
                             )
                             # Add label for V2 point
                             ax_values.annotate(
-                                str(row['V2 Selection'])[:20] + ('...' if len(str(row['V2 Selection'])) > 20 else ''),
+                                clean_label,
                                 (row['Combined_Time'], row['V2']),
                                 xytext=(5, -15), textcoords='offset points',
                                 fontsize=8, alpha=0.7, color='red'
@@ -576,21 +606,26 @@ if uploaded_file is not None:
                 min_time = values_plot_data['Combined_Time'].min()
                 max_time = values_plot_data['Combined_Time'].max()
                 
-                # Create quarter markers
-                quarter_ticks = [0, 15, 30, 45, 60]  # Start of each quarter
-                quarter_labels = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
+                # Create quarter markers based on actual data quarters
+                available_quarters = values_plot_data['Quarter'].dropna().unique()
+                quarter_ticks = []
+                quarter_labels = []
                 
-                # Only show ticks that are within data range
-                valid_ticks = []
-                valid_labels = []
-                for tick, label in zip(quarter_ticks, quarter_labels):
-                    if min_time <= tick <= max_time:
-                        valid_ticks.append(tick)
-                        valid_labels.append(label)
+                # Map quarters to their time positions
+                for quarter in sorted(available_quarters, key=lambda x: (len(x), x)):
+                    if quarter.startswith('Q') and len(quarter) > 1:
+                        try:
+                            quarter_num = int(quarter[1:])
+                            quarter_start_time = quarter_num * 15
+                            if min_time <= quarter_start_time <= max_time:
+                                quarter_ticks.append(quarter_start_time)
+                                quarter_labels.append(quarter)
+                        except:
+                            continue
                 
-                if valid_ticks:
-                    ax_values.set_xticks(valid_ticks)
-                    ax_values.set_xticklabels(valid_labels)
+                if quarter_ticks:
+                    ax_values.set_xticks(quarter_ticks)
+                    ax_values.set_xticklabels(quarter_labels)
                 
                 ax_values.set_xlabel('Game Time (Quarters)')
                 ax_values.set_ylabel('V1 and V2 Values')
@@ -730,7 +765,7 @@ if uploaded_file is not None:
             display_df = filtered_df
         else:
             # Show key columns
-            key_columns = ['Market', 'V2 Selection', 'V2_Player', 'V2_Line', 'Quarter', 'Time_Minutes', 'V1', 'V2', 
+            key_columns = ['Market', 'V2 Selection', 'V2_Clean_Selection', 'V2_Player', 'V2_Line', 'Quarter', 'Time_Minutes', 'V1', 'V2', 
                           'V2_minus_V1', 'V1 Odds', 'V2 Odds', 'Timestamp', 'Home Score', 'Away Score']
             available_key_columns = [col for col in key_columns if col in filtered_df.columns]
             display_df = filtered_df[available_key_columns]
