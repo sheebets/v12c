@@ -601,12 +601,7 @@ if uploaded_file is not None:
                 plt.tight_layout()
                 st.pyplot(fig_values)
             else:
-                st.warning("No data available with valid timestamp and V1/V2 values for plotting.")a=0.3)
-                
-                plt.tight_layout()
-                st.pyplot(fig_odds)
-            else:
-                st.warning("No data available with valid timestamp and odds information for plotting.")
+                st.warning("No data available with valid timestamp and V1/V2 values for plotting.")
             
             # Trend analysis
             st.subheader("📈 Trend Analysis")
