@@ -518,8 +518,72 @@ if uploaded_file is not None:
             else:
                 st.warning("No data available with valid timestamp information for plotting.")
             
+            # Second scatter plot: V1 and V2 Odds vs Game Time
+            st.subheader("📈 V1 vs V2 Odds Trend Over Time")
+            
+            # Filter out rows without combined time data
+            odds_plot_data = filtered_df.dropna(subset=['Combined_Time', 'V1 Odds', 'V2 Odds'])
+            
+            if len(odds_plot_data) > 0:
+                fig_odds, ax_odds = plt.subplots(figsize=(14, 8))
+                
+                # Plot V1 Odds
+                scatter_v1 = ax_odds.scatter(
+                    odds_plot_data['Combined_Time'], 
+                    odds_plot_data['V1 Odds'],
+                    c='blue', 
+                    s=40,
+                    alpha=0.6,
+                    label='V1 Odds',
+                    edgecolors='black',
+                    linewidth=0.3
+                )
+                
+                # Plot V2 Odds
+                scatter_v2 = ax_odds.scatter(
+                    odds_plot_data['Combined_Time'], 
+                    odds_plot_data['V2 Odds'],
+                    c='red', 
+                    s=40,
+                    alpha=0.6,
+                    label='V2 Odds',
+                    edgecolors='black',
+                    linewidth=0.3
+                )
+                
+                # Customize x-axis to show quarter labels
+                min_time = odds_plot_data['Combined_Time'].min()
+                max_time = odds_plot_data['Combined_Time'].max()
+                
+                # Create quarter markers
+                quarter_ticks = [0, 15, 30, 45, 60]  # Start of each quarter
+                quarter_labels = ['Q0', 'Q1', 'Q2', 'Q3', 'Q4']
+                
+                # Only show ticks that are within data range
+                valid_ticks = []
+                valid_labels = []
+                for tick, label in zip(quarter_ticks, quarter_labels):
+                    if min_time <= tick <= max_time:
+                        valid_ticks.append(tick)
+                        valid_labels.append(label)
+                
+                if valid_ticks:
+                    ax_odds.set_xticks(valid_ticks)
+                    ax_odds.set_xticklabels(valid_labels)
+                
+                ax_odds.set_xlabel('Game Time (Quarters)')
+                ax_odds.set_ylabel('Odds Values')
+                ax_odds.set_title('V1 Odds (Blue) vs V2 Odds (Red) Over Game Time')
+                ax_odds.legend()
+                ax_odds.grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                st.pyplot(fig_odds)
+            else:
+                st.warning("No data available with valid timestamp and odds information for plotting.")
+            
             # Trend analysis
-            st.subheader("📈 Trends View")
+            st.subheader("📈 Trend Analysis")
             
             # Create trend charts
             trend_col1, trend_col2 = st.columns(2)
