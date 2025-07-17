@@ -518,42 +518,63 @@ if uploaded_file is not None:
             else:
                 st.warning("No data available with valid timestamp information for plotting.")
             
-            # Second scatter plot: V1 and V2 Odds vs Game Time
-            st.subheader("📈 V1 vs V2 Odds Trend Over Time")
+            # Second scatter plot: V1 and V2 vs Game Time
+            st.subheader("📈 V1 vs V2 Values Over Time")
             
             # Filter out rows without combined time data
-            odds_plot_data = filtered_df.dropna(subset=['Combined_Time', 'V1 Odds', 'V2 Odds'])
+            values_plot_data = filtered_df.dropna(subset=['Combined_Time', 'V1', 'V2'])
             
-            if len(odds_plot_data) > 0:
-                fig_odds, ax_odds = plt.subplots(figsize=(14, 8))
+            if len(values_plot_data) > 0:
+                fig_values, ax_values = plt.subplots(figsize=(14, 8))
                 
-                # Plot V1 Odds
-                scatter_v1 = ax_odds.scatter(
-                    odds_plot_data['Combined_Time'], 
-                    odds_plot_data['V1 Odds'],
+                # Plot V1 Values
+                scatter_v1 = ax_values.scatter(
+                    values_plot_data['Combined_Time'], 
+                    values_plot_data['V1'],
                     c='blue', 
                     s=40,
                     alpha=0.6,
-                    label='V1 Odds',
+                    label='V1 Values',
                     edgecolors='black',
                     linewidth=0.3
                 )
                 
-                # Plot V2 Odds
-                scatter_v2 = ax_odds.scatter(
-                    odds_plot_data['Combined_Time'], 
-                    odds_plot_data['V2 Odds'],
+                # Plot V2 Values
+                scatter_v2 = ax_values.scatter(
+                    values_plot_data['Combined_Time'], 
+                    values_plot_data['V2'],
                     c='red', 
                     s=40,
                     alpha=0.6,
-                    label='V2 Odds',
+                    label='V2 Values',
                     edgecolors='black',
                     linewidth=0.3
                 )
                 
+                # Add labels for V2 Selection (only show a subset to avoid overcrowding)
+                if len(values_plot_data) <= 50:  # Show labels only if not too many points
+                    for idx, row in values_plot_data.iterrows():
+                        if pd.notna(row['V2 Selection']):
+                            # Add label for V1 point
+                            ax_values.annotate(
+                                str(row['V2 Selection'])[:20] + ('...' if len(str(row['V2 Selection'])) > 20 else ''),
+                                (row['Combined_Time'], row['V1']),
+                                xytext=(5, 5), textcoords='offset points',
+                                fontsize=8, alpha=0.7, color='blue'
+                            )
+                            # Add label for V2 point
+                            ax_values.annotate(
+                                str(row['V2 Selection'])[:20] + ('...' if len(str(row['V2 Selection'])) > 20 else ''),
+                                (row['Combined_Time'], row['V2']),
+                                xytext=(5, -15), textcoords='offset points',
+                                fontsize=8, alpha=0.7, color='red'
+                            )
+                else:
+                    st.info("Too many data points to show labels clearly. Labels are hidden for better visualization.")
+                
                 # Customize x-axis to show quarter labels
-                min_time = odds_plot_data['Combined_Time'].min()
-                max_time = odds_plot_data['Combined_Time'].max()
+                min_time = values_plot_data['Combined_Time'].min()
+                max_time = values_plot_data['Combined_Time'].max()
                 
                 # Create quarter markers
                 quarter_ticks = [0, 15, 30, 45, 60]  # Start of each quarter
@@ -568,14 +589,19 @@ if uploaded_file is not None:
                         valid_labels.append(label)
                 
                 if valid_ticks:
-                    ax_odds.set_xticks(valid_ticks)
-                    ax_odds.set_xticklabels(valid_labels)
+                    ax_values.set_xticks(valid_ticks)
+                    ax_values.set_xticklabels(valid_labels)
                 
-                ax_odds.set_xlabel('Game Time (Quarters)')
-                ax_odds.set_ylabel('Odds Values')
-                ax_odds.set_title('V1 Odds (Blue) vs V2 Odds (Red) Over Game Time')
-                ax_odds.legend()
-                ax_odds.grid(True, alpha=0.3)
+                ax_values.set_xlabel('Game Time (Quarters)')
+                ax_values.set_ylabel('V1 and V2 Values')
+                ax_values.set_title('V1 Values (Blue) vs V2 Values (Red) Over Game Time')
+                ax_values.legend()
+                ax_values.grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                st.pyplot(fig_values)
+            else:
+                st.warning("No data available with valid timestamp and V1/V2 values for plotting.")a=0.3)
                 
                 plt.tight_layout()
                 st.pyplot(fig_odds)
