@@ -212,12 +212,12 @@ if uploaded_file is not None:
         if selected_markets:
             filtered_df = filtered_df[filtered_df['Market'].isin(selected_markets)]
     
-    # V2 Selection filter with search
-    if 'V2 Selection' in df.columns:
+    # V2 Selection filter with search (using clean selection names)
+    if 'V2_Clean_Selection' in df.columns:
         st.sidebar.subheader("V2 Selection")
         v2_search = st.sidebar.text_input("Search V2 Selections:", key="v2_search")
         
-        available_v2 = filtered_df['V2 Selection'].dropna().unique()
+        available_v2 = filtered_df['V2_Clean_Selection'].dropna().unique()
         if v2_search:
             available_v2 = [v for v in available_v2 if v2_search.lower() in str(v).lower()]
         
@@ -229,7 +229,7 @@ if uploaded_file is not None:
         )
         
         if selected_v2:
-            filtered_df = filtered_df[filtered_df['V2 Selection'].isin(selected_v2)]
+            filtered_df = filtered_df[filtered_df['V2_Clean_Selection'].isin(selected_v2)]
     
     # Player filter with search (V2_Player)
     if 'V2_Player' in df.columns:
