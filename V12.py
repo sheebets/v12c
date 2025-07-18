@@ -710,59 +710,78 @@ if uploaded_file is not None:
             with trend_col2:
                 # Time-based analysis
                 if 'Combined_Time' in filtered_df.columns and filtered_df['Combined_Time'].notna().any():
-                    fig_time, ax_time = plt.subplots(figsize=(8, 6))
-                    
-                    # Group by quarter and calculate mean difference
-                    quarter_data = filtered_df.dropna(subset=['Quarter', 'V2_minus_V1']).groupby('Quarter')['V2_minus_V1'].agg(['mean', 'count']).reset_index()
-                    
-                    if len(quarter_data) > 0:
-                        bars = ax_time.bar(quarter_data['Quarter'], quarter_data['mean'], 
-                                          alpha=0.7, color='lightblue', edgecolor='black')
-                        ax_time.axhline(y=0, color='red', linestyle='--', alpha=0.7)
-                        ax_time.set_xlabel('Quarter')
-                        ax_time.set_ylabel('Average V2 - V1 Difference')
-                        ax_time.set_title('Average V2 - V1 Difference by Quarter')
-                        ax_time.grid(True, alpha=0.3)
+                    try:
+                        fig_time, ax_time = plt.subplots(figsize=(8, 6))
                         
-                        # Add count labels on bars
-                        for bar, count in zip(bars, quarter_data['count']):
-                            height = bar.get_height()
-                            ax_time.text(bar.get_x() + bar.get_width()/2., height + 0.001,
-                                       f'n={count}', ha='center', va='bottom', fontsize=8)
+                        # Group by quarter and calculate mean difference
+                        quarter_data = filtered_df.dropna(subset=['Quarter', 'V2_minus_V1']).groupby('Quarter')['V2_minus_V1'].agg(['mean', 'count']).reset_index()
                         
-                        plt.tight_layout()
-                        st.pyplot(fig_time)
-                    else:
-                        st.info("No quarter data available for analysis")
+                        if len(quarter_data) > 0:
+                            bars = ax_time.bar(quarter_data['Quarter'], quarter_data['mean'], 
+                                              alpha=0.7, color='lightblue', edgecolor='black')
+                            ax_time.axhline(y=0, color='red', linestyle='--', alpha=0.7)
+                            ax_time.set_xlabel('Quarter')
+                            ax_time.set_ylabel('Average V2 - V1 Difference')
+                            ax_time.set_title('Average V2 - V1 Difference by Quarter')
+                            ax_time.grid(True, alpha=0.3)
+                            
+                            # Add count labels on bars
+                            for bar, count in zip(bars, quarter_data['count']):
+                                height = bar.get_height()
+                                ax_time.text(bar.get_x() + bar.get_width()/2., height + 0.001,
+                                           f'n={count}', ha='center', va='bottom', fontsize=8)
+                            
+                            plt.tight_layout()
+                            st.pyplot(fig_time)
+                            plt.close(fig_time)  # Close figure to free memory
+                        else:
+                            st.info("No quarter data available for analysis")
+                    except Exception as e:
+                        st.error(f"Error creating time-based chart: {str(e)}")
+                        st.info("Showing alternative analysis instead")
+                        
+                        # Fallback to simple text analysis
+                        if 'Quarter' in filtered_df.columns:
+                            quarter_summary = filtered_df.groupby('Quarter')['V2_minus_V1'].agg(['mean', 'count']).round(3)
+                            st.write("**Quarter Summary:**")
+                            st.dataframe(quarter_summary)
                 else:
                     # Box plot by market as fallback
                     if len(filtered_df['Market'].unique()) > 1:
-                        fig_box, ax_box = plt.subplots(figsize=(8, 6))
-                        
-                        # Create box plot manually using matplotlib
-                        markets = filtered_df['Market'].unique()
-                        market_data = []
-                        market_labels = []
-                        
-                        for market in markets:
-                            market_odds = filtered_df[filtered_df['Market'] == market]['V2_minus_V1'].dropna()
-                            market_data.append(market_odds)
-                            market_labels.append(market)
-                        
-                        bp = ax_box.boxplot(market_data, labels=market_labels, patch_artist=True)
-                        
-                        # Color the boxes
-                        colors = plt.cm.Set3(np.linspace(0, 1, len(markets)))
-                        for patch, color in zip(bp['boxes'], colors):
-                            patch.set_facecolor(color)
-                            patch.set_alpha(0.7)
-                        
-                        ax_box.set_title('V2 - V1 Difference by Market')
-                        ax_box.set_ylabel('V2 - V1 Difference')
-                        ax_box.tick_params(axis='x', rotation=45)
-                        ax_box.grid(True, alpha=0.3)
-                        plt.tight_layout()
-                        st.pyplot(fig_box)
+                        try:
+                            fig_box, ax_box = plt.subplots(figsize=(8, 6))
+                            
+                            # Create box plot manually using matplotlib
+                            markets = filtered_df['Market'].unique()
+                            market_data = []
+                            market_labels = []
+                            
+                            for market in markets:
+                                market_odds = filtered_df[filtered_df['Market'] == market]['V2_minus_V1'].dropna()
+                                if len(market_odds) > 0:  # Only add if there's data
+                                    market_data.append(market_odds)
+                                    market_labels.append(market)
+                            
+                            if market_data:  # Only create plot if there's data
+                                bp = ax_box.boxplot(market_data, labels=market_labels, patch_artist=True)
+                                
+                                # Color the boxes
+                                colors = plt.cm.Set3(np.linspace(0, 1, len(market_data)))
+                                for patch, color in zip(bp['boxes'], colors):
+                                    patch.set_facecolor(color)
+                                    patch.set_alpha(0.7)
+                                
+                                ax_box.set_title('V2 - V1 Difference by Market')
+                                ax_box.set_ylabel('V2 - V1 Difference')
+                                ax_box.tick_params(axis='x', rotation=45)
+                                ax_box.grid(True, alpha=0.3)
+                                plt.tight_layout()
+                                st.pyplot(fig_box)
+                                plt.close(fig_box)  # Close figure to free memory
+                            else:
+                                st.info("No market data available for comparison")
+                        except Exception as e:
+                            st.error(f"Error creating box plot: {str(e)}")
                     else:
                         st.info("Need multiple markets for comparison")
         
