@@ -212,6 +212,51 @@ if uploaded_file is not None:
         if selected_markets:
             filtered_df = filtered_df[filtered_df['Market'].isin(selected_markets)]
     
+    # Market Number Exclusion Filter
+    if 'Market' in df.columns:
+        st.sidebar.subheader("Exclude Market Numbers")
+        
+        # Extract unique market numbers from market names
+        def extract_market_number(market_name):
+            if pd.isna(market_name):
+                return None
+            market_str = str(market_name).strip()
+            # Look for pattern like "(1050)" at the beginning
+            if market_str.startswith('(') and ')' in market_str:
+                try:
+                    number_part = market_str.split(')')[0][1:]  # Remove ( and )
+                    return number_part
+                except:
+                    return None
+            return None
+        
+        # Get all unique market numbers
+        market_numbers = []
+        for market in filtered_df['Market'].dropna().unique():
+            number = extract_market_number(market)
+            if number:
+                market_numbers.append(number)
+        
+        unique_market_numbers = sorted(list(set(market_numbers)))
+        
+        if unique_market_numbers:
+            excluded_numbers = st.sidebar.multiselect(
+                "Select Market Numbers to EXCLUDE:",
+                options=unique_market_numbers,
+                default=[],
+                key="exclude_market_numbers",
+                help="Select market numbers to remove from analysis (e.g., select '1050' to remove all markets starting with '(1050)')"
+            )
+            
+            # Apply exclusion filter
+            if excluded_numbers:
+                for exclude_num in excluded_numbers:
+                    filtered_df = filtered_df[~filtered_df['Market'].str.contains(f'\\({exclude_num}\\)', na=False, regex=True)]
+                
+                st.sidebar.write(f"Excluded {len(excluded_numbers)} market number(s)")
+        else:
+            st.sidebar.write("No market numbers found to exclude")
+    
     # V2 Selection filter with search (using clean selection names)
     if 'V2_Clean_Selection' in df.columns:
         st.sidebar.subheader("V2 Selection")
