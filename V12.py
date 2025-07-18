@@ -511,22 +511,28 @@ if uploaded_file is not None:
                     min_time = plot_data['Combined_Time'].min()
                     max_time = plot_data['Combined_Time'].max()
                     
-                    # Create quarter markers based on actual data quarters
+                    # Debug: Show what quarters are available
                     available_quarters = plot_data['Quarter'].dropna().unique()
+                    st.write(f"Debug - Available quarters: {available_quarters}")
+                    st.write(f"Debug - Time range: {min_time} to {max_time}")
+                    
+                    # Create quarter markers based on actual data quarters
                     quarter_ticks = []
                     quarter_labels = []
                     
-                    # Map quarters to their time positions
+                    # For each quarter in the data, find its representative time position
                     for quarter in sorted(available_quarters, key=lambda x: (len(x), x)):
-                        if quarter.startswith('Q') and len(quarter) > 1:
-                            try:
-                                quarter_num = int(quarter[1:])
-                                quarter_start_time = quarter_num * 15
-                                if min_time <= quarter_start_time <= max_time:
-                                    quarter_ticks.append(quarter_start_time)
-                                    quarter_labels.append(quarter)
-                            except:
-                                continue
+                        if quarter.startswith('Q'):
+                            # Get data points for this quarter
+                            quarter_data = plot_data[plot_data['Quarter'] == quarter]
+                            if len(quarter_data) > 0:
+                                # Use the middle time point of this quarter's data
+                                quarter_time = quarter_data['Combined_Time'].mean()
+                                quarter_ticks.append(quarter_time)
+                                quarter_labels.append(quarter)
+                    
+                    st.write(f"Debug - Quarter ticks: {quarter_ticks}")
+                    st.write(f"Debug - Quarter labels: {quarter_labels}")
                     
                     if quarter_ticks:
                         ax.set_xticks(quarter_ticks)
@@ -611,17 +617,16 @@ if uploaded_file is not None:
                 quarter_ticks = []
                 quarter_labels = []
                 
-                # Map quarters to their time positions
+                # For each quarter in the data, find its representative time position
                 for quarter in sorted(available_quarters, key=lambda x: (len(x), x)):
-                    if quarter.startswith('Q') and len(quarter) > 1:
-                        try:
-                            quarter_num = int(quarter[1:])
-                            quarter_start_time = quarter_num * 15
-                            if min_time <= quarter_start_time <= max_time:
-                                quarter_ticks.append(quarter_start_time)
-                                quarter_labels.append(quarter)
-                        except:
-                            continue
+                    if quarter.startswith('Q'):
+                        # Get data points for this quarter
+                        quarter_data = values_plot_data[values_plot_data['Quarter'] == quarter]
+                        if len(quarter_data) > 0:
+                            # Use the middle time point of this quarter's data
+                            quarter_time = quarter_data['Combined_Time'].mean()
+                            quarter_ticks.append(quarter_time)
+                            quarter_labels.append(quarter)
                 
                 if quarter_ticks:
                     ax_values.set_xticks(quarter_ticks)
